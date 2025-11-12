@@ -1,5 +1,6 @@
 import os
 from contextlib import asynccontextmanager
+import time
 from typing import List
 
 from fastapi import FastAPI
@@ -43,5 +44,13 @@ async def query_retriever(request: QueryRequest):
     Queries the vector store with a given question and returns relevant documents.
     """
     print(f"Received query: {request.q}")
+    
+    start_time = time.monotonic()
+
     docs = retriever.invoke(request.q)
+
+    end_time = time.monotonic()
+    duration = end_time - start_time
+    print(f"--- Time spent on retriever.invoke: {duration:.2f} seconds ---")
+
     return docs
