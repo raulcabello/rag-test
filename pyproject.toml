@@ -1,0 +1,15 @@
+[project]
+name = "rag-docker-loader"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "chroma>=0.2.0",
+    "langchain>=1.0.5",
+    "langchain-chroma>=1.0.0",
+    "langchain-community>=0.4.1",
+    "langchain-ollama>=1.0.0",
+    "fastapi[standard]>=0.111.0",
+    "uvicorn>=0.30.1",
+]
