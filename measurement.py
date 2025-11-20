@@ -14,23 +14,21 @@ import langchain
 
 # Environment variables
 BASE_URL = os.environ.get("BASE_URL", "")
-RAG_API_URL = os.environ.get("RAG_API_URL", "http://localhost:8000/query")
+RAG_API_URL = os.environ.get("RAG_API_URL", "http://localhost:8000/")
 
-def get_rag_response(query: str) -> dict:
+def get_rag_response(query: str, type: str) -> dict:
     """
     Queries the RAG API and returns the response.
     """
     try:
-        response = requests.post(RAG_API_URL, json={"q": query})
+        response = requests.post(RAG_API_URL+ type, json={"q": query})
         response.raise_for_status()
         return response.json()
     except requests.exceptions.RequestException as e:
         print(f"Error querying RAG API: {e}")
         return []
 
-def main():
-    # Note: The 'answer' field is a placeholder.
-    # Ragas will generate the actual answer from your RAG pipeline.
+def eval(type: str):
     eval_data = [
         {
             "question": "What is the lifespan of a cluster registration token after successful use?",
@@ -130,9 +128,8 @@ def main():
         }
     ]
 
-    print("Generating answers and contexts from RAG API...")
     for item in eval_data:
-        rag_response = get_rag_response(item["question"])
+        rag_response = get_rag_response(item["question"], type)
         item["contexts"] = [doc["page_content"] for doc in rag_response]
 
     dataset = Dataset.from_list(eval_data)
@@ -143,7 +140,8 @@ def main():
         context_precision,
     ]
 
-    print("Running Ragas evaluation...")
+    print(f"Running Ragas evaluation for {type}...")
+
     result = evaluate(
         dataset=dataset,
         metrics=metrics,
@@ -152,13 +150,17 @@ def main():
         batch_size=1
     )
 
-    print("Evaluation finished.")
-    print(result)
+    print(f"Ragas evaluation results for {type}: {result}")
 
     df = result.to_pandas()
     print(df)
-    df.to_json('eval_fleet_recursive.json', orient='records')
+    df.to_json(f'eval_{type}.json', orient='records')
 
+def main():
+    eval("recursive")
+    eval("markdown")
+    eval("hierarchical")
+    eval("summary")
 
 if __name__ == "__main__":
     main()
