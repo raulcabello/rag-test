@@ -156,62 +156,31 @@ def _load_markdown(persist_dir, embeddings, raw_docs):
         headers_to_split_on=headers_to_split_on,
         strip_headers=True
     )
+    recursive_splitter = RecursiveCharacterTextSplitter(
+        chunk_size=2000,
+        chunk_overlap=200
+    )
     all_chunks = []
     for doc in raw_docs:
         chunks = markdown_splitter.split_text(doc.page_content)
-        all_chunks.extend(chunks)
+        for chunk in chunks:
+            if len(chunk.page_content) > 2000:
+                print(f"Chunk too large ({len(chunk.page_content)}). Applying recursive split...")
+                # Split the large chunk's content into smaller pieces
+                recursively_split_documents = recursive_splitter.split_documents([chunk])
+                all_chunks.extend(recursively_split_documents)
+            else:
+                all_chunks.append(chunk)
+
     Chroma.from_documents(documents=all_chunks, embedding=embeddings, persist_directory=persist_dir)
-
-
-def chunk_markdown_file(doc_path: str, splitter_type: str, chunk_size: int, chunk_overlap: int) -> list:
-    """
-    Reads a Markdown file, splits it into chunks based on headers,
-    and returns the chunks.
-
-    Args:
-        file_path (str): The path to the markdown file.
-    Returns:
-        chunk_size (int): The size of each chunk.
-        chunk_overlap (int): The overlap between chunks.
-        A list of Document objects (chunks).
-    """
-    try:
-        with open(doc_path, 'r', encoding='utf-8') as f:
-            markdown_text = f.read()
-    except FileNotFoundError:
-        print(f"Error: The file '{doc_path}' was not found.")
-        return []
-
-    if splitter_type == 'header':
-        headers_to_split_on = [
-            ("#", "Header 1"),
-            ("##", "Header 2"),
-        ]
-
-        markdown_splitter = MarkdownHeaderTextSplitter(
-            headers_to_split_on=headers_to_split_on,
-            strip_headers=True # Set to False to keep headers in the content
-        )
-        chunks = markdown_splitter.split_text(markdown_text)
-    elif splitter_type == 'recursive':
-        text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=chunk_size,
-            chunk_overlap=chunk_overlap,
-        )
-        chunks = text_splitter.create_documents([markdown_text], metadatas=[{"source": doc_path}])
-    else:
-        raise ValueError(f"Unknown splitter type: {splitter_type}")
-
-    return chunks
-
 
 def main():
     parser = argparse.ArgumentParser(description="Load and chunk markdown documents into a ChromaDB vector store.")
     parser.add_argument(
         '--splitter',
         type=str,
-        choices=['header', 'recursive','hierarchical','summary','all'],
-        default='header',
+        choices=['markdown', 'recursive','hierarchical','summary','all'],
+        default='markdown',
         help="The type of text splitter to use. 'header' splits by markdown headers, 'recursive' splits by character count."
     )
     parser.add_argument(
